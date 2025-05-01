@@ -26,8 +26,8 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t strapi-app:$GITHUB_SHA .
-          docker tag strapi-app:$GITHUB_SHA ${{ secrets.ECR_REGISTRY }}/strapi-app:$GITHUB_SHA
+          docker tag strapi-app:$GITHUB_SHA ${{ secrets.ECR_REGISTRY_URI }}/strapi-app:$GITHUB_SHA
 
       - name: Push Docker image to ECR
         run: |
-          docker push ${{ secrets.ECR_REGISTRY }}/strapi-app:$GITHUB_SHA
+          docker push ${{ secrets.ECR_REGISTRY_URI }}/strapi-app:$GITHUB_SHA
