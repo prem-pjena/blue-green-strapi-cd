@@ -1,11 +1,9 @@
 name: CD - Blue/Green Deployment - 10
 
 on:
-  workflow_dispatch:
-    inputs:
-      ecr_image:
-        description: 'ECR Image URI'
-        required: true
+  push:
+    branches:
+      - main 
 
 jobs:
   bluegreen-deployment:
