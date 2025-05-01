@@ -60,8 +60,9 @@ jobs:
 
       - name: Terraform Apply
         run: |
-          cd terraform
-          terraform apply -auto-approve -var="ecr_image=${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA"
+            cd terraform
+            terraform apply -auto-approve -var="strapi_image=${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA"
+        
 
       - name: Get ECS Task Definition ARN
         id: get_task_def
