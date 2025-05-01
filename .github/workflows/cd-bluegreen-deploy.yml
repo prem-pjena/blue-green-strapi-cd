@@ -32,7 +32,7 @@ jobs:
       - name: Terraform Apply
         run: |
           cd terraform
-          terraform apply -auto-approve -var="ecr_image=${{ secrets.ECR_REGISTRY }}/strapi-app:$GITHUB_SHA"
+          terraform apply -auto-approve -var="ecr_image=${{ secrets.ECR_REPOSITORY_URI }}/strapi-app:$GITHUB_SHA"
 
       - name: Get ECS Task Definition ARN
         id: get_task_def
