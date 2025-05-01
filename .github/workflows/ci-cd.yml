@@ -1,4 +1,4 @@
-name: CD - Blue/Green Deployment - Strapi App
+name: CI/CD Pipeline - Build, Push, and Deploy
 
 on:
   push:
@@ -6,7 +6,36 @@ on:
       - main
 
 jobs:
+  # CI - Build and Push Docker Image to ECR
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t strapi-app:$GITHUB_SHA .
+          docker tag strapi-app:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+
+  # CD - Blue/Green Deployment - Strapi App (Runs only after CI job success)
   bluegreen-deployment:
+    needs: build-push  # This ensures that this job runs only after the 'build-push' job is successful
     runs-on: ubuntu-latest
     environment: production
 
