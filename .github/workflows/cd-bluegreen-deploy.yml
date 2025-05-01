@@ -1,17 +1,17 @@
-name: CD - Blue/Green Deployment - 10
+name: CD - Blue/Green Deployment - Strapi App
 
 on:
   push:
     branches:
-      - main 
+      - main
 
 jobs:
   bluegreen-deployment:
     runs-on: ubuntu-latest
     environment: production
-    
+
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Configure AWS
@@ -26,13 +26,13 @@ jobs:
 
       - name: Terraform Init
         run: |
-          cd terraform_10
+          cd terraform
           terraform init
 
       - name: Terraform Apply
         run: |
-          cd terraform_10
-          terraform apply -auto-approve -var="ecr_image=${{ github.event.inputs.ecr_image }}"
+          cd terraform
+          terraform apply -auto-approve -var="ecr_image=${{ secrets.ECR_REGISTRY }}/strapi-app:$GITHUB_SHA"
 
       - name: Get ECS Task Definition ARN
         id: get_task_def
