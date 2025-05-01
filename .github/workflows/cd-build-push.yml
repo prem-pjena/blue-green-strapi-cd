@@ -8,7 +8,6 @@ on:
 jobs:
   build-push:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -26,10 +25,9 @@ jobs:
 
       - name: Build Docker image
         run: |
-            docker build -t strapi-app:$GITHUB_SHA .
-            docker tag strapi-app:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}/strapi-repo:$GITHUB_SHA
-        
+          docker build -t strapi-app:$GITHUB_SHA .
+          docker tag strapi-app:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+
       - name: Push Docker image to ECR
         run: |
-            docker push ${{ secrets.ECR_REPOSITORY_URI }}/strapi-repo:$GITHUB_SHA
-        
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
