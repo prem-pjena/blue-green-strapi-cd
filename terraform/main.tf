@@ -293,6 +293,7 @@ resource "aws_codedeploy_deployment_group" "strapi_codedeploy_group" {
     deployment_type   = "BLUE_GREEN"
     deployment_option = "WITH_TRAFFIC_CONTROL"
   }
+
   ecs_service {
     cluster_name = aws_ecs_cluster.strapi_cluster.name
     service_name = aws_ecs_service.strapi_service.name
@@ -300,13 +301,12 @@ resource "aws_codedeploy_deployment_group" "strapi_codedeploy_group" {
 
   blue_green_deployment_config {
     terminate_blue_instances_on_deployment_success {
-      action                              = "TERMINATE"
-      termination_wait_time_in_minutes   = 5
+      action                            = "TERMINATE"
+      termination_wait_time_in_minutes = 5
     }
 
     deployment_ready_option {
-      action_on_timeout = "CONTINUE_DEPLOYMENT"
-      # AWS limitation: this must be 0 if action is CONTINUE_DEPLOYMENT
+      action_on_timeout    = "CONTINUE_DEPLOYMENT"
       wait_time_in_minutes = 0
     }
   }
@@ -332,3 +332,4 @@ resource "aws_codedeploy_deployment_group" "strapi_codedeploy_group" {
     events  = ["DEPLOYMENT_FAILURE"]
   }
 }
+

@@ -1,0 +1,46 @@
+{
+    "family": "strapi-task",
+    "networkMode": "awsvpc",
+    "containerDefinitions": [
+      {
+        "name": "strapi",
+        "image": "331405041655.dkr.ecr.us-east-1.amazonaws.com/strapi-repo:latest",
+        "essential": true,
+        "memory": 2048,
+        "cpu": 1024,
+        "portMappings": [
+          {
+            "containerPort": 1337,
+            "hostPort": 1337,
+            "protocol": "tcp"
+          }
+        ],
+        "environment": [
+          {
+            "name": "APP_KEYS",
+            "value": "strapiSuperSecretKey1,strapiSuperSecretKey2"
+          },
+          {
+            "name": "NODE_ENV",
+            "value": "production"
+          }
+        ],
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+            "awslogs-group": "/ecs/strapi",
+            "awslogs-region": "us-east-1",
+            "awslogs-stream-prefix": "ecs"
+          }
+        }
+      }
+    ],
+    "executionRoleArn": "arn:aws:iam::331405041655:role/ecsTaskExecutionRole",
+    "taskRoleArn": "arn:aws:iam::331405041655:role/strapi-task-role",
+    "requiresCompatibilities": [
+      "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "2048"
+  }
+  
