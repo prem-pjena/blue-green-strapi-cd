@@ -87,8 +87,8 @@ jobs:
           echo "task_definition_arn=$TASK_DEF_ARN" >> $GITHUB_ENV
           echo "Registered Task Definition: $TASK_DEF_ARN"
 
-          - name: Create Deployment via CodeDeploy
-          run: |
+      - name: Create Deployment via CodeDeploy
+        run: |
             ENCODED_APPSPEC=$(jq -Rs . < appspec.yaml)
             aws deploy create-deployment \
               --application-name strapi-codedeploy-app \
@@ -105,6 +105,7 @@ jobs:
                   }
                 }
               }')"
+        
         
 
       - name: Terraform Destroy (on failure)
