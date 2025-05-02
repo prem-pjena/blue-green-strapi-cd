@@ -89,24 +89,13 @@ jobs:
 
       - name: Create Deployment via CodeDeploy
         run: |
-          APPSPEC_CONTENT=$(cat appspec.yaml | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
-          aws deploy create-deployment \
-            --application-name strapi-codedeploy-app \
-            --deployment-group-name strapi-codedeploy-deployment-group \
-            --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
-            --revision "revisionType=AppSpecContent,appSpecContent={content=\"$APPSPEC_CONTENT\"}" \
-            --target-deployment "{
-              \"targetService\": {
-                \"type\": \"AWS::ECS::Service\",
-                \"properties\": {
-                  \"taskDefinition\": \"${{ env.task_definition_arn }}\",
-                  \"loadBalancerInfo\": {
-                    \"containerName\": \"strapi\",
-                    \"containerPort\": 1337
-                  }
-                }
-              }
-            }"
+            APPSPEC_CONTENT=$(cat appspec.yaml | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
+            aws deploy create-deployment \
+              --application-name strapi-codedeploy-app \
+              --deployment-group-name strapi-codedeploy-deployment-group \
+              --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
+              --revision "revisionType=AppSpecContent,appSpecContent={\"content\":\"$APPSPEC_CONTENT\"}"
+        
 
       # Step to clean up resources in case of failure
       - name: Terraform Destroy (on failure)
