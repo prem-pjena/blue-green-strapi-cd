@@ -21,7 +21,7 @@
       "environment": [
         {
           "name": "JWT_SECRET",
-          "value": "${JWT_SECRET}"
+          "value": "JWT_SECRET_VALUE_PLACEHOLDER"
         }
       ]
     }

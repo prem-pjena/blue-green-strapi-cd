@@ -167,7 +167,8 @@ resource "aws_ecs_task_definition" "strapi_task" {
       ]
       environment = [
         { name = "APP_KEYS", value = "strapiSuperSecretKey1,strapiSuperSecretKey2" },
-        { name = "NODE_ENV", value = "production" }
+        { name = "NODE_ENV", value = "production" },
+        { name = "JWT_SECRET", value = "${var.JWT_SECRET}" } # Add the JWT_SECRET environment variable here
       ]
       logConfiguration = {
         logDriver = "awslogs",
@@ -182,6 +183,7 @@ resource "aws_ecs_task_definition" "strapi_task" {
 
   depends_on = [aws_cloudwatch_log_group.strapi_logs]
 }
+
 
 # --- Load Balancer ---
 resource "aws_lb" "strapi_alb" {

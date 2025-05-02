@@ -12,6 +12,13 @@ variable "strapi_image" {
   default     = "331405041655.dkr.ecr.us-east-1.amazonaws.com/strapi-repo:latest"
 }
 
+variable "JWT_SECRET" {
+  description = "The JWT secret for Strapi"
+  type        = string
+  sensitive   = true
+}
+
+
 variable "strapi_container_port" {
   description = "Port on which the Strapi container will listen."
   type        = number

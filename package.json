@@ -1,0 +1,20 @@
+{
+  "name": "strapi-ecs-deploy-cloudwatch",
+  "version": "1.0.0",
+  "description": "This repository demonstrates the deployment of a Strapi application using a **Blue/Green deployment strategy** on AWS. The setup leverages **Amazon ECS (Elastic Container Service)**, **AWS CodeDeploy**, and **GitHub Actions** for continuous integration and deployment (CI/CD). This guide walks through the process of Dockerizing the Strapi app, pushing the Docker image to **Amazon ECR**, and setting up a fully automated deployment pipeline that switches traffic between Blue and Green environments.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prem-pjena/blue-green-strapi-cd.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/prem-pjena/blue-green-strapi-cd/issues"
+  },
+  "homepage": "https://github.com/prem-pjena/blue-green-strapi-cd#readme"
+}
