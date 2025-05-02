@@ -66,9 +66,9 @@ jobs:
 
       - name: Terraform Plan
         run: |
-          cd terraform
-          terraform plan -out=tfplan -var "jwt_secret=$JWT_SECRET"
-
+            cd terraform
+            terraform plan -out=tfplan -var "jwt_secret=${{ secrets.JWT_SECRET }}"
+        
       - name: Terraform Apply
         run: |
           cd terraform
