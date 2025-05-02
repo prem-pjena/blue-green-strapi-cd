@@ -73,7 +73,9 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
-          terraform plan -out=tfplan -var="JWT_SECRET=${{ secrets.JWT_SECRET }}"
+          terraform plan -out=tfplan \
+            -var="JWT_SECRET=${{ secrets.JWT_SECRET }}" \
+            -var="API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }}"
 
 
       - name: Terraform Apply
@@ -94,6 +96,17 @@ jobs:
                 map(if .name == "JWT_SECRET" then .value = $JWT_SECRET | . else . end)
             ' taskdef.json > taskdef-temp.json
           mv taskdef-temp.json taskdef.json
+        
+      - name: Inject API_TOKEN_SALT into Task Definition
+        run: |
+            jq --arg API_TOKEN_SALT "$API_TOKEN_SALT" '
+              .containerDefinitions[0].environment |=
+              (map(if .name == "API_TOKEN_SALT" then .value = $API_TOKEN_SALT | . else . end) +
+              (if any(.name == "API_TOKEN_SALT"; .) then [] else [{"name":"API_TOKEN_SALT","value":$API_TOKEN_SALT}] end))
+            ' taskdef.json > taskdef-temp.json
+            mv taskdef-temp.json taskdef.json
+        env:
+            API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}
         
 
       - name: Register New Task Definition

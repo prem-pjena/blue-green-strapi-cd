@@ -18,6 +18,13 @@ variable "JWT_SECRET" {
   sensitive   = true
 }
 
+variable "API_TOKEN_SALT" {
+  description = "API token salt for Strapi"
+  type        = string
+  sensitive   = true
+}
+
+
 
 variable "strapi_container_port" {
   description = "Port on which the Strapi container will listen."

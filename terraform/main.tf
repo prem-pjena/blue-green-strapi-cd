@@ -168,7 +168,8 @@ resource "aws_ecs_task_definition" "strapi_task" {
       environment = [
         { name = "APP_KEYS", value = "strapiSuperSecretKey1,strapiSuperSecretKey2" },
         { name = "NODE_ENV", value = "production" },
-        { name = "JWT_SECRET", value = "${var.JWT_SECRET}" } # Add the JWT_SECRET environment variable here
+        { name = "JWT_SECRET", value = var.JWT_SECRET },
+        { name = "API_TOKEN_SALT", value = var.API_TOKEN_SALT }
       ]
       logConfiguration = {
         logDriver = "awslogs",
