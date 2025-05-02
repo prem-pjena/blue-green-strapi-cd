@@ -55,14 +55,23 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Verify Files in Directory
+        run: ls -la
+
       - name: Terraform Init
-        run: terraform init
+        run: |
+          cd path/to/your/terraform/files  # Adjust path if needed
+          terraform init
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: |
+          cd path/to/your/terraform/files
+          terraform plan -out=tfplan
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: |
+          cd path/to/your/terraform/files
+          terraform apply -auto-approve tfplan
 
       - name: Update Task Definition with new Image
         id: render_taskdef
@@ -75,7 +84,7 @@ jobs:
         id: register_task
         run: |
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdef.json | jq -r '.taskDefinition.taskDefinitionArn')
-          echo "task_definition_arn=$TASK_DEF_ARN" >> $GITHUB_ENV  # Save ARN as environment variable
+          echo "task_definition_arn=$TASK_DEF_ARN" >> $GITHUB_ENV
 
       - name: Create Deployment via CodeDeploy
         run: |
