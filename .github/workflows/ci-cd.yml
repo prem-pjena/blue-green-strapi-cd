@@ -64,6 +64,12 @@ jobs:
           cd terraform
           terraform init
 
+      - name: Terraform Validate
+        run: |
+            cd terraform
+            terraform validate
+        
+
       - name: Terraform Plan
         run: |
           cd terraform
@@ -83,10 +89,12 @@ jobs:
 
       - name: Inject JWT_SECRET into Task Definition
         run: |
-          jq --arg JWT_SECRET "$JWT_SECRET" \
-             '(.containerDefinitions[0].environment //= []) += [{"name":"JWT_SECRET","value":$JWT_SECRET}]' \
-             taskdef.json > taskdef-temp.json
-          mv taskdef-temp.json taskdef.json
+         jq --arg JWT_SECRET "$JWT_SECRET" '
+         .containerDefinitions[0].environment |=
+         (map(if .name == "JWT_SECRET" then .value = $JWT_SECRET | . else . end) +
+         (if any(.name == "JWT_SECRET"; .) then [] else [{"name":"JWT_SECRET","value":$JWT_SECRET}] end))
+         ' taskdef.json > taskdef-temp.json
+         mv taskdef-temp.json taskdef.json
 
       - name: Register New Task Definition
         id: register_task
@@ -143,4 +151,4 @@ jobs:
       - name: Terraform Destroy
         run: |
           cd terraform
-          terraform destroy -auto-approve -input=false -var="jwt_secret=${{ secrets.JWT_SECRET }}"
+          terraform destroy -auto-approve -input=false -var="JWT_SECRET=${{ secrets.JWT_SECRET }}"
