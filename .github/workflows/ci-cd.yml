@@ -89,7 +89,7 @@ jobs:
 
       - name: Create Deployment via CodeDeploy
         run: |
-          APPSPEC_CONTENT=$(cat appspec.yml | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
+          APPSPEC_CONTENT=$(cat appspec.yaml | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
           aws deploy create-deployment \
             --application-name strapi-codedeploy-app \
             --deployment-group-name strapi-codedeploy-deployment-group \
