@@ -92,21 +92,20 @@ jobs:
       - name: Inject JWT_SECRET into Task Definition
         run: |
           jq --arg JWT_SECRET "$JWT_SECRET" '
-              .containerDefinitions[0].environment |=
-                map(if .name == "JWT_SECRET" then .value = $JWT_SECRET | . else . end)
-            ' taskdef.json > taskdef-temp.json
-          mv taskdef-temp.json taskdef.json
+          .containerDefinitions[0].environment |=
+          map(if .name == "JWT_SECRET" then .value = $JWT_SECRET | . else . end) +
+          (if any(.name == "JWT_SECRET"; .) then [] else [{"name":"JWT_SECRET","value":$JWT_SECRET}] end)
+          ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
+
         
       - name: Inject API_TOKEN_SALT into Task Definition
         run: |
             jq --arg API_TOKEN_SALT "$API_TOKEN_SALT" '
-              .containerDefinitions[0].environment |=
-              (map(if .name == "API_TOKEN_SALT" then .value = $API_TOKEN_SALT | . else . end) +
-              (if any(.name == "API_TOKEN_SALT"; .) then [] else [{"name":"API_TOKEN_SALT","value":$API_TOKEN_SALT}] end))
-            ' taskdef.json > taskdef-temp.json
-            mv taskdef-temp.json taskdef.json
-        env:
-            API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}
+            .containerDefinitions[0].environment |=
+            map(if .name == "API_TOKEN_SALT" then .value = $API_TOKEN_SALT | . else . end) +
+            (if any(.name == "API_TOKEN_SALT"; .) then [] else [{"name":"API_TOKEN_SALT","value":$API_TOKEN_SALT}] end)
+            ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
+
         
 
       - name: Register New Task Definition
@@ -137,31 +136,38 @@ jobs:
                   }
                 }
               }')"
+              
+              
+              
+    terraform-destroy:
+   name: Terraform Destroy on Failure
+  if: failure()  # Ensures this runs only if the previous jobs fail
+  runs-on: ubuntu-latest
+  needs: terraform-deployment
+  env:
+    JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
 
-  terraform-destroy:
-    name: Terraform Destroy on Failure
-    if: failure()
-    runs-on: ubuntu-latest
-    needs: terraform-deployment
-    env:
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.4.5
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v1
-        with:
-          terraform_version: 1.4.5
+    - name: Configure AWS Credentials for Terraform
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
-      - name: Configure AWS Credentials for Terraform
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+    - name: Terraform Init (Reconfigure)
+      run: |
+        cd terraform
+        terraform init -reconfigure
 
-      - name: Terraform Destroy
-        run: |
-          cd terraform
-          terraform destroy -auto-approve -input=false -var="JWT_SECRET=${{ secrets.JWT_SECRET }}"
+    - name: Terraform Destroy
+      run: |
+        cd terraform
+        terraform destroy -auto-approve -input=false -var="JWT_SECRET=${{ secrets.JWT_SECRET }}"

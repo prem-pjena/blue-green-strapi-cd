@@ -19,15 +19,16 @@
         }
       ],
       "environment": [
-        {
+       {
           "name": "JWT_SECRET",
           "value": "JWT_SECRET_VALUE_PLACEHOLDER"
-        },
-        {
+       },
+       {
           "name": "API_TOKEN_SALT",
           "value": "API_TOKEN_SALT_PLACEHOLDER"
-        }
+       }
       ],
+
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
