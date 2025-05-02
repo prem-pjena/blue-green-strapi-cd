@@ -87,14 +87,25 @@ jobs:
           echo "task_definition_arn=$TASK_DEF_ARN" >> $GITHUB_ENV
           echo "Registered Task Definition: $TASK_DEF_ARN"
 
-      - name: Create Deployment via CodeDeploy
-        run: |
-          ENCODED_APPSPEC=$(jq -Rs . < appspec.yaml)
-          aws deploy create-deployment \
-            --application-name strapi-codedeploy-app \
-            --deployment-group-name strapi-codedeploy-deployment-group \
-            --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
-            --revision "revisionType=AppSpecContent,appSpecContent={\"content\":$ENCODED_APPSPEC}"
+          - name: Create Deployment via CodeDeploy
+          run: |
+            ENCODED_APPSPEC=$(jq -Rs . < appspec.yaml)
+            aws deploy create-deployment \
+              --application-name strapi-codedeploy-app \
+              --deployment-group-name strapi-codedeploy-deployment-group \
+              --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
+              --cli-input-json "$(jq -n --arg content "$ENCODED_APPSPEC" '{
+                applicationName: "strapi-codedeploy-app",
+                deploymentGroupName: "strapi-codedeploy-deployment-group",
+                deploymentConfigName: "CodeDeployDefault.ECSCanary10Percent5Minutes",
+                revision: {
+                  revisionType: "AppSpecContent",
+                  appSpecContent: {
+                    content: $content
+                  }
+                }
+              }')"
+        
 
       - name: Terraform Destroy (on failure)
         if: failure()
