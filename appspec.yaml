@@ -3,9 +3,10 @@ Resources:
 - TargetService:
     Type: AWS::ECS::Service
     Properties:
-      TaskDefinition: arn:aws:ecs:us-east-1:331405041655:task-definition/strapi-task-family:latest # Use 'latest' or dynamically fetched version
+      TaskDefinition: <TASK_DEFINITION> # Dynamically patched in GitHub Actions
       LoadBalancerInfo:
         ContainerName: strapi
         ContainerPort: 1337
-      Role: arn:aws:iam::331405041655:role/ecsServiceRole # Specify the ECS Service Role
-      DesiredCount: 1 # Ensure you specify the number of desired task instances
+      PlatformVersion: "LATEST"
+      Role: arn:aws:iam::331405041655:role/ecsServiceRole
+      DesiredCount: 1

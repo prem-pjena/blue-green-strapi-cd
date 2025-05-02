@@ -66,13 +66,13 @@ jobs:
 
       - name: Terraform Plan
         run: |
-            cd terraform
-            terraform plan -out=tfplan -var "jwt_secret=${{ secrets.JWT_SECRET }}"
-        
+          cd terraform
+          terraform plan -input=false -out=tfplan -var="jwt_secret=${{ secrets.JWT_SECRET }}"
+
       - name: Terraform Apply
         run: |
           cd terraform
-          terraform apply -auto-approve tfplan
+          terraform apply -input=false -auto-approve tfplan
 
       - name: Update Task Definition with New Image URI
         run: |
@@ -91,20 +91,18 @@ jobs:
         id: register_task
         run: |
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdef.json | jq -r '.taskDefinition.taskDefinitionArn')
-          echo "task_definition_arn=$TASK_DEF_ARN" >> $GITHUB_ENV
-          echo "Registered Task Definition: $TASK_DEF_ARN"
+          echo "TASK_DEFINITION_ARN=$TASK_DEF_ARN" >> $GITHUB_ENV
 
       - name: Create Deployment via CodeDeploy
         run: |
-          TASK_DEF_ARN="${{ env.task_definition_arn }}"
-          sed "s|<TASK_DEFINITION>|$TASK_DEF_ARN|g" appspec.yaml > appspec-patched.yaml
+          sed "s|<TASK_DEFINITION>|${{ env.TASK_DEFINITION_ARN }}|g" appspec.yaml > appspec-patched.yaml
           ENCODED_APPSPEC=$(jq -Rs . < appspec-patched.yaml)
 
           aws deploy create-deployment \
             --cli-input-json "$(jq -n \
               --arg content "$ENCODED_APPSPEC" \
-              --arg app "strapi-codedeploy-app" \
-              --arg group "strapi-codedeploy-deployment-group" \
+              --arg app "${{ secrets.CODEDEPLOY_APPLICATION_NAME }}" \
+              --arg group "${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP_NAME }}" \
               --arg config "CodeDeployDefault.ECSCanary10Percent5Minutes" \
               '{
                 applicationName: $app,
@@ -117,7 +115,6 @@ jobs:
                   }
                 }
               }')"
-
 
   terraform-destroy:
     name: Terraform Destroy on Failure
@@ -145,4 +142,4 @@ jobs:
       - name: Terraform Destroy
         run: |
           cd terraform
-          terraform destroy -auto-approve -var "jwt_secret=$JWT_SECRET"
+          terraform destroy -auto-approve -input=false -var="jwt_secret=${{ secrets.JWT_SECRET }}"
