@@ -67,7 +67,8 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
-          terraform plan -input=false -out=tfplan -var="jwt_secret=${{ secrets.JWT_SECRET }}"
+          terraform plan -out=tfplan -var="JWT_SECRET=${{ secrets.JWT_SECRET }}"
+
 
       - name: Terraform Apply
         run: |
