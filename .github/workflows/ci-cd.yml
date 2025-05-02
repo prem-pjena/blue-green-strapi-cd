@@ -38,7 +38,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-push
     environment: production
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -56,34 +55,35 @@ jobs:
           aws-region: us-east-1
 
       - name: List Files in Directory
-        run: ls -la
+        run: |
+          ls -la terraform  # Adjust this to your terraform files location
 
       - name: Terraform Init
         run: |
-          cd terraform  # Adjust this to where your .tf files are
+          cd terraform  # Adjust if the terraform files are in a sub-directory
           terraform init
 
       - name: Terraform Plan
         run: |
-          cd terraform  
+          cd terraform
           terraform plan -out=tfplan
 
       - name: Terraform Apply
         run: |
-          cd terraform  # Adjust this to where your .tf files are
+          cd terraform  # Adjust if the terraform files are in a sub-directory
           terraform apply -auto-approve tfplan
 
       - name: Update Task Definition with new Image
         id: render_taskdef
         run: |
           IMAGE_URI="${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA"
-          jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image = $IMAGE' taskdef.json > taskdef-temp.json
-          mv taskdef-temp.json taskdef.json
+          jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image = $IMAGE' terraform/taskdef.json > terraform/taskdef-temp.json
+          mv terraform/taskdef-temp.json terraform/taskdef.json
 
       - name: Register New Task Definition
         id: register_task
         run: |
-          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdef.json | jq -r '.taskDefinition.taskDefinitionArn')
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://terraform/taskdef.json | jq -r '.taskDefinition.taskDefinitionArn')
           echo "task_definition_arn=$TASK_DEF_ARN" >> $GITHUB_ENV
 
       - name: Create Deployment via CodeDeploy
@@ -94,5 +94,22 @@ jobs:
             --deployment-group-name strapi-codedeploy-deployment-group \
             --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
             --revision "revisionType=AppSpecContent,appSpecContent={content=\"$APPSPEC_CONTENT\"}" \
-            --target-deployment \
-              targetService={type=AWS::ECS::Service,properties={taskDefinition=${{ env.task_definition_arn }},loadBalancerInfo={containerName=strapi,containerPort=1337}}}
+            --target-deployment "{
+              \"targetService\": {
+                \"type\": \"AWS::ECS::Service\",
+                \"properties\": {
+                  \"taskDefinition\": \"${{ env.task_definition_arn }}\",
+                  \"loadBalancerInfo\": {
+                    \"containerName\": \"strapi\",
+                    \"containerPort\": 1337
+                  }
+                }
+              }
+            }"
+
+      # Step to clean up resources in case of failure
+      - name: Terraform Destroy (on failure)
+        if: failure()
+        run: |
+          cd terraform  # Adjust if the terraform files are in a sub-directory
+          terraform destroy -auto-approve
