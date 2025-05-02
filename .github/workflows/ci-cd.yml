@@ -56,11 +56,11 @@ jobs:
 
       - name: List Files in Directory
         run: |
-          ls -la terraform  # Adjust this to your terraform files location
+          ls -la terraform
 
       - name: Terraform Init
         run: |
-          cd terraform  # Adjust if the terraform files are in a sub-directory
+          cd terraform
           terraform init
 
       - name: Terraform Plan
@@ -70,36 +70,34 @@ jobs:
 
       - name: Terraform Apply
         run: |
-          cd terraform  # Adjust if the terraform files are in a sub-directory
+          cd terraform
           terraform apply -auto-approve tfplan
 
-      - name: Update Task Definition with new Image
+      - name: Update Task Definition with New Image URI
         id: render_taskdef
         run: |
           IMAGE_URI="${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA"
           jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image = $IMAGE' taskdef.json > taskdef-temp.json
           mv taskdef-temp.json taskdef.json
 
-
       - name: Register New Task Definition
         id: register_task
         run: |
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdef.json | jq -r '.taskDefinition.taskDefinitionArn')
           echo "task_definition_arn=$TASK_DEF_ARN" >> $GITHUB_ENV
+          echo "Registered Task Definition: $TASK_DEF_ARN"
 
       - name: Create Deployment via CodeDeploy
         run: |
-            APPSPEC_CONTENT=$(cat appspec.yaml | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
-            aws deploy create-deployment \
-              --application-name strapi-codedeploy-app \
-              --deployment-group-name strapi-codedeploy-deployment-group \
-              --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
-              --revision "revisionType=AppSpecContent,appSpecContent={\"content\":\"$APPSPEC_CONTENT\"}"
-        
+          ENCODED_APPSPEC=$(jq -Rs . < appspec.yaml)
+          aws deploy create-deployment \
+            --application-name strapi-codedeploy-app \
+            --deployment-group-name strapi-codedeploy-deployment-group \
+            --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
+            --revision "revisionType=AppSpecContent,appSpecContent={\"content\":$ENCODED_APPSPEC}"
 
-      # Step to clean up resources in case of failure
       - name: Terraform Destroy (on failure)
         if: failure()
         run: |
-          cd terraform  # Adjust if the terraform files are in a sub-directory
+          cd terraform
           terraform destroy -auto-approve
