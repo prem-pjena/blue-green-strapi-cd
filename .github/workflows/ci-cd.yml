@@ -33,9 +33,9 @@ jobs:
         run: |
           docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
 
-  # CD - Blue/Green Deployment - Strapi App (Runs only after CI job success)
+  # CD - Blue/Green Deployment - Strapi App
   bluegreen-deployment:
-    needs: build-push  # This ensures that this job runs only after the 'build-push' job is successful
+    needs: build-push
     runs-on: ubuntu-latest
     environment: production
 
@@ -50,15 +50,26 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
+      - name: Update Task Definition with new Image
+        id: render_taskdef
         run: |
-          cd terraform
-          terraform init
+          IMAGE_URI="${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA"
+          jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image = $IMAGE' taskdef.json > taskdef-temp.json
+          mv taskdef-temp.json taskdef.json
 
-      - name: Terraform Apply
+      - name: Register New Task Definition
+        id: register_task
         run: |
-            cd terraform
-            terraform apply -auto-approve -var="strapi_image=${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA"
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdef.json | jq -r '.taskDefinition.taskDefinitionArn')
+          echo "task_definition_arn=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
+
+      - name: Create Deployment via CodeDeploy
+        run: |
+          APPSPEC_CONTENT=$(cat appspec.yml | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
+          aws deploy create-deployment \
+            --application-name strapi-codedeploy-app \
+            --deployment-group-name strapi-codedeploy-deployment-group \
+            --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
+            --revision "revisionType=AppSpecContent,appSpecContent={content=\"$APPSPEC_CONTENT\"}" \
+            --target-deployment \
+              targetService={type=AWS::ECS::Service,properties={taskDefinition=${{ steps.register_task.outputs.task_definition_arn }},loadBalancerInfo={containerName=strapi,containerPort=1337}}}

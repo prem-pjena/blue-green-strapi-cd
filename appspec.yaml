@@ -1,29 +1,9 @@
-version: 0.0
-resources:
-  - name: strapi-task
-    type: AWS::ECS::TaskDefinition
-    properties:
-      TaskDefinition: arn:aws:ecs:us-east-1:123456789012:task-definition/strapi-task
-  - name: strapi-service
-    type: AWS::ECS::Service
-    properties:
-      Cluster: arn:aws:ecs:us-east-1:123456789012:cluster/strapi-cluster
-      Service: strapi-service
-  - name: strapi-alb
-    type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    properties:
-      LoadBalancer: arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/strapi-alb/abcdef1234567890
-
-hooks:
-  BeforeInstall:
-    - location: scripts/before_install.sh
-      timeout: 180
-  AfterInstall:
-    - location: scripts/after_install.sh
-      timeout: 180
-  ApplicationStart:
-    - location: scripts/application_start.sh
-      timeout: 180
-  ValidateService:
-    - location: scripts/validate_service.sh
-      timeout: 180
+version: 1.0
+Resources:
+- TargetService:
+    Type: AWS::ECS::Service
+    Properties:
+      TaskDefinition: PLACEHOLDER
+      LoadBalancerInfo:
+        ContainerName: strapi
+        ContainerPort: 1337
