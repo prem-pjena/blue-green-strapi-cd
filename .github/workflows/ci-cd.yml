@@ -6,8 +6,8 @@ on:
       - main
 
 jobs:
-  # CI - Build and Push Docker Image to ECR
   build-push:
+    name: CI - Build and Push Docker Image to ECR
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -35,11 +35,14 @@ jobs:
           docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
           docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
-  # CD - Blue/Green Deployment with Terraform and CodeDeploy
   terraform-deployment:
+    name: CD - Blue/Green Deployment with Terraform and CodeDeploy
     runs-on: ubuntu-latest
     needs: build-push
     environment: production
+    env:
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -64,7 +67,7 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
-          terraform plan -out=tfplan -var "JWT_SECRET=${{ secrets.JWT_SECRET }}"
+          terraform plan -out=tfplan -var "jwt_secret=$JWT_SECRET"
 
       - name: Terraform Apply
         run: |
@@ -73,14 +76,14 @@ jobs:
 
       - name: Update Task Definition with New Image URI
         run: |
-          IMAGE_URI="${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA"
+          IMAGE_URI="${ECR_REPOSITORY_URI}:$GITHUB_SHA"
           jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image = $IMAGE' taskdef.json > taskdef-temp.json
           mv taskdef-temp.json taskdef.json
 
       - name: Inject JWT_SECRET into Task Definition
         run: |
-          jq --arg JWT_SECRET "${{ secrets.JWT_SECRET }}" \
-             '.containerDefinitions[0].environment += [{"name":"JWT_SECRET","value":$JWT_SECRET}]' \
+          jq --arg JWT_SECRET "$JWT_SECRET" \
+             '(.containerDefinitions[0].environment //= []) += [{"name":"JWT_SECRET","value":$JWT_SECRET}]' \
              taskdef.json > taskdef-temp.json
           mv taskdef-temp.json taskdef.json
 
@@ -93,7 +96,10 @@ jobs:
 
       - name: Create Deployment via CodeDeploy
         run: |
-          ENCODED_APPSPEC=$(jq -Rs . < appspec.yaml)
+          TASK_DEF_ARN="${{ env.task_definition_arn }}"
+          sed "s|<TASK_DEFINITION>|$TASK_DEF_ARN|g" appspec.yaml > appspec-patched.yaml
+          ENCODED_APPSPEC=$(jq -Rs . < appspec-patched.yaml)
+
           aws deploy create-deployment \
             --cli-input-json "$(jq -n \
               --arg content "$ENCODED_APPSPEC" \
@@ -112,11 +118,14 @@ jobs:
                 }
               }')"
 
-  # Terraform Destroy (on failure)
+
   terraform-destroy:
+    name: Terraform Destroy on Failure
+    if: failure()
     runs-on: ubuntu-latest
-    if: failure()  # Trigger only on failure of any step in the pipeline
     needs: terraform-deployment
+    env:
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -136,4 +145,4 @@ jobs:
       - name: Terraform Destroy
         run: |
           cd terraform
-          terraform destroy -auto-approve
+          terraform destroy -auto-approve -var "jwt_secret=$JWT_SECRET"

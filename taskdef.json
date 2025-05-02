@@ -9,7 +9,7 @@
   "containerDefinitions": [
     {
       "name": "strapi",
-      "image": "331405041655.dkr.ecr.us-east-1.amazonaws.com/strapi-repo:latest",
+      "image": "ECR_IMAGE_URI_PLACEHOLDER",  
       "essential": true,
       "portMappings": [
         {
@@ -21,9 +21,17 @@
       "environment": [
         {
           "name": "JWT_SECRET",
-          "value": "JWT_SECRET_VALUE_PLACEHOLDER"
+          "value": "JWT_SECRET_VALUE_PLACEHOLDER"  
         }
-      ]
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/strapi",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
     }
   ]
 }
