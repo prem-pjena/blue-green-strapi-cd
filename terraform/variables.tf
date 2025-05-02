@@ -30,6 +30,12 @@ variable "STRAPI_ADMIN_SECRET" {
   sensitive   = true
 }
 
+variable "TRANSFER_TOKEN_SALT" {
+  description = "Secret for transfer token salt"
+  type        = string
+}
+
+
 
 
 

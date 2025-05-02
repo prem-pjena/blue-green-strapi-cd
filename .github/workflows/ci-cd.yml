@@ -41,10 +41,11 @@ jobs:
     needs: build-push
     environment: production
     env:
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
-      API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}
-      STRAPI_ADMIN_SECRET: ${{ secrets.STRAPI_ADMIN_SECRET }}
+     JWT_SECRET: ${{ secrets.JWT_SECRET }}
+     ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+     API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}
+     STRAPI_ADMIN_SECRET: ${{ secrets.STRAPI_ADMIN_SECRET }}
+     TRANSFER_TOKEN_SALT: ${{ secrets.TRANSFER_TOKEN_SALT }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -77,7 +78,9 @@ jobs:
             terraform plan -out=tfplan \
               -var="JWT_SECRET=${{ secrets.JWT_SECRET }}" \
               -var="API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }}" \
-              -var="STRAPI_ADMIN_SECRET=${{ secrets.STRAPI_ADMIN_SECRET }}"  # Added STRAPI_ADMIN_SECRET
+              -var="STRAPI_ADMIN_SECRET=${{ secrets.STRAPI_ADMIN_SECRET }}" \
+              -var="TRANSFER_TOKEN_SALT=${{ secrets.TRANSFER_TOKEN_SALT }}"
+        
         
 
       - name: Terraform Apply
@@ -138,6 +141,23 @@ jobs:
                  end)
             )
           ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
+
+      - name: Inject TRANSFER_TOKEN_SALT into Task Definition
+        run: |
+         jq --arg TRANSFER_TOKEN_SALT "$TRANSFER_TOKEN_SALT" '
+         .containerDefinitions[0].environment = (
+         (if (.containerDefinitions[0].environment | type) == "array"
+         then .containerDefinitions[0].environment
+         else []
+         end
+         | map(if .name == "TRANSFER_TOKEN_SALT" then .value = $TRANSFER_TOKEN_SALT | . else . end))
+         + (if any(.containerDefinitions[0].environment[]; .name == "TRANSFER_TOKEN_SALT")
+           then []
+           else [{"name":"TRANSFER_TOKEN_SALT","value":$TRANSFER_TOKEN_SALT}]
+           end)
+         )
+         ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
+
 
       - name: Register New Task Definition
         id: register_task

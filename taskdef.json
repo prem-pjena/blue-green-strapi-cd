@@ -30,6 +30,10 @@
         {
           "name": "STRAPI_ADMIN_SECRET",
           "value": "${STRAPI_ADMIN_SECRET}"
+        },
+        {
+          "name": "TRANSFER_TOKEN_SALT",
+          "value": "${TRANSFER_TOKEN_SALT}"
         }
       ],
       "logConfiguration": {
