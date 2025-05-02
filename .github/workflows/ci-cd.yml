@@ -89,12 +89,12 @@ jobs:
 
       - name: Inject JWT_SECRET into Task Definition
         run: |
-         jq --arg JWT_SECRET "$JWT_SECRET" '
-         .containerDefinitions[0].environment |=
-         (map(if .name == "JWT_SECRET" then .value = $JWT_SECRET | . else . end) +
-         (if any(.name == "JWT_SECRET"; .) then [] else [{"name":"JWT_SECRET","value":$JWT_SECRET}] end))
-         ' taskdef.json > taskdef-temp.json
-         mv taskdef-temp.json taskdef.json
+          jq --arg JWT_SECRET "$JWT_SECRET" '
+              .containerDefinitions[0].environment |=
+                map(if .name == "JWT_SECRET" then .value = $JWT_SECRET | . else . end)
+            ' taskdef.json > taskdef-temp.json
+          mv taskdef-temp.json taskdef.json
+        
 
       - name: Register New Task Definition
         id: register_task
