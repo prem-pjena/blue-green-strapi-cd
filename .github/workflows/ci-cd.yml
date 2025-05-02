@@ -41,11 +41,11 @@ jobs:
     needs: build-push
     environment: production
     env:
-     JWT_SECRET: ${{ secrets.JWT_SECRET }}
-     ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
-     API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}
-     STRAPI_ADMIN_SECRET: ${{ secrets.STRAPI_ADMIN_SECRET }}
-     TRANSFER_TOKEN_SALT: ${{ secrets.TRANSFER_TOKEN_SALT }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}
+      STRAPI_ADMIN_SECRET: ${{ secrets.STRAPI_ADMIN_SECRET }}
+      TRANSFER_TOKEN_SALT: ${{ secrets.TRANSFER_TOKEN_SALT }}
+      ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -63,25 +63,19 @@ jobs:
           aws-region: us-east-1
 
       - name: Terraform Init
-        run: |
-          cd terraform
-          terraform init
+        run: cd terraform && terraform init
 
       - name: Terraform Validate
-        run: |
-          cd terraform
-          terraform validate
+        run: cd terraform && terraform validate
 
       - name: Terraform Plan
         run: |
-            cd terraform
-            terraform plan -out=tfplan \
-              -var="JWT_SECRET=${{ secrets.JWT_SECRET }}" \
-              -var="API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }}" \
-              -var="STRAPI_ADMIN_SECRET=${{ secrets.STRAPI_ADMIN_SECRET }}" \
-              -var="TRANSFER_TOKEN_SALT=${{ secrets.TRANSFER_TOKEN_SALT }}"
-        
-        
+          cd terraform
+          terraform plan -out=tfplan \
+            -var="JWT_SECRET=${{ secrets.JWT_SECRET }}" \
+            -var="API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }}" \
+            -var="STRAPI_ADMIN_SECRET=${{ secrets.STRAPI_ADMIN_SECRET }}" \
+            -var="TRANSFER_TOKEN_SALT=${{ secrets.TRANSFER_TOKEN_SALT }}"
 
       - name: Terraform Apply
         run: |
@@ -90,74 +84,33 @@ jobs:
 
       - name: Update Task Definition with New Image URI
         run: |
-          IMAGE_URI="${ECR_REPOSITORY_URI}:$GITHUB_SHA"
+          IMAGE_URI="${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA"
           jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image = $IMAGE' taskdef.json > taskdef-temp.json
           mv taskdef-temp.json taskdef.json
 
-      - name: Inject JWT_SECRET into Task Definition
+      - name: Inject Environment Variables into Task Definition
         run: |
-          jq --arg JWT_SECRET "$JWT_SECRET" '
-            .containerDefinitions[0].environment = (
-              (if (.containerDefinitions[0].environment | type) == "array" 
-               then .containerDefinitions[0].environment 
-               else [] 
-               end 
-              | map(if .name == "JWT_SECRET" then .value = $JWT_SECRET | . else . end))
-              + (if any(.containerDefinitions[0].environment[]; .name == "JWT_SECRET") 
-                 then [] 
-                 else [{"name":"JWT_SECRET","value":$JWT_SECRET}] 
-                 end)
-            )
-          ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
+          update_env_var() {
+            local var_name=$1
+            local var_value=$2
+            jq --arg name "$var_name" --arg value "$var_value" '
+              .containerDefinitions[0].environment = (
+                (if (.containerDefinitions[0].environment | type) == "array"
+                 then .containerDefinitions[0].environment
+                 else [] end
+                | map(if .name == $name then .value = $value | . else . end))
+                + (if any(.containerDefinitions[0].environment[]; .name == $name)
+                   then []
+                   else [{"name": $name, "value": $value}]
+                   end)
+              )
+            ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
+          }
 
-      - name: Inject API_TOKEN_SALT into Task Definition
-        run: |
-          jq --arg API_TOKEN_SALT "$API_TOKEN_SALT" '
-            .containerDefinitions[0].environment = (
-              (if (.containerDefinitions[0].environment | type) == "array" 
-               then .containerDefinitions[0].environment 
-               else [] 
-               end 
-              | map(if .name == "API_TOKEN_SALT" then .value = $API_TOKEN_SALT | . else . end))
-              + (if any(.containerDefinitions[0].environment[]; .name == "API_TOKEN_SALT") 
-                 then [] 
-                 else [{"name":"API_TOKEN_SALT","value":$API_TOKEN_SALT}] 
-                 end)
-            )
-          ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
-
-      - name: Inject STRAPI_ADMIN_SECRET into Task Definition
-        run: |
-          jq --arg STRAPI_ADMIN_SECRET "$STRAPI_ADMIN_SECRET" '
-            .containerDefinitions[0].environment = (
-              (if (.containerDefinitions[0].environment | type) == "array"
-               then .containerDefinitions[0].environment
-               else []
-               end
-              | map(if .name == "STRAPI_ADMIN_SECRET" then .value = $STRAPI_ADMIN_SECRET | . else . end))
-              + (if any(.containerDefinitions[0].environment[]; .name == "STRAPI_ADMIN_SECRET")
-                 then []
-                 else [{"name":"STRAPI_ADMIN_SECRET","value":$STRAPI_ADMIN_SECRET}]
-                 end)
-            )
-          ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
-
-      - name: Inject TRANSFER_TOKEN_SALT into Task Definition
-        run: |
-         jq --arg TRANSFER_TOKEN_SALT "$TRANSFER_TOKEN_SALT" '
-         .containerDefinitions[0].environment = (
-         (if (.containerDefinitions[0].environment | type) == "array"
-         then .containerDefinitions[0].environment
-         else []
-         end
-         | map(if .name == "TRANSFER_TOKEN_SALT" then .value = $TRANSFER_TOKEN_SALT | . else . end))
-         + (if any(.containerDefinitions[0].environment[]; .name == "TRANSFER_TOKEN_SALT")
-           then []
-           else [{"name":"TRANSFER_TOKEN_SALT","value":$TRANSFER_TOKEN_SALT}]
-           end)
-         )
-         ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
-
+          update_env_var "JWT_SECRET" "$JWT_SECRET"
+          update_env_var "API_TOKEN_SALT" "$API_TOKEN_SALT"
+          update_env_var "STRAPI_ADMIN_SECRET" "$STRAPI_ADMIN_SECRET"
+          update_env_var "TRANSFER_TOKEN_SALT" "$TRANSFER_TOKEN_SALT"
 
       - name: Register New Task Definition
         id: register_task
@@ -205,17 +158,15 @@ jobs:
         with:
           terraform_version: 1.4.5
 
-      - name: Configure AWS Credentials for Terraform
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Terraform Init (Reconfigure)
-        run: |
-          cd terraform
-          terraform init -reconfigure
+      - name: Terraform Init
+        run: cd terraform && terraform init -reconfigure
 
       - name: Terraform Destroy
         run: |
