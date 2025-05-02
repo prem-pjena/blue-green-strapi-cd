@@ -1,16 +1,21 @@
 {
   "family": "strapi-task-family",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::331405041655:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::331405041655:role/strapi-task-role",
   "containerDefinitions": [
     {
       "name": "strapi",
-      "image": "REPLACE_ME",  // Will be replaced by jq in workflow
-      "memory": 2048,
-      "cpu": 1024,
+      "image": "placeholder", 
       "essential": true,
       "portMappings": [
         {
           "containerPort": 1337,
-          "hostPort": 1337
+          "hostPort": 1337,
+          "protocol": "tcp"
         }
       ]
     }
