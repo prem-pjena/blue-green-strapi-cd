@@ -24,6 +24,13 @@ variable "API_TOKEN_SALT" {
   sensitive   = true
 }
 
+variable "STRAPI_ADMIN_SECRET" {
+  description = "The secret key for Strapi Admin"
+  type        = string
+  sensitive   = true
+}
+
+
 
 
 variable "strapi_container_port" {

@@ -169,7 +169,8 @@ resource "aws_ecs_task_definition" "strapi_task" {
         { name = "APP_KEYS", value = "strapiSuperSecretKey1,strapiSuperSecretKey2" },
         { name = "NODE_ENV", value = "production" },
         { name = "JWT_SECRET", value = var.JWT_SECRET },
-        { name = "API_TOKEN_SALT", value = var.API_TOKEN_SALT }
+        { name = "API_TOKEN_SALT", value = var.API_TOKEN_SALT },
+        { name = "STRAPI_ADMIN_SECRET", value = var.STRAPI_ADMIN_SECRET }
       ]
       logConfiguration = {
         logDriver = "awslogs",

@@ -9,7 +9,7 @@
   "containerDefinitions": [
     {
       "name": "strapi",
-      "image": "ECR_IMAGE_URI_PLACEHOLDER",
+      "image": "${ECR_REPOSITORY_URI}:$GITHUB_SHA",
       "essential": true,
       "portMappings": [
         {
@@ -19,16 +19,19 @@
         }
       ],
       "environment": [
-       {
+        {
           "name": "JWT_SECRET",
-          "value": "JWT_SECRET_VALUE_PLACEHOLDER"
-       },
-       {
+          "value": "${JWT_SECRET}"
+        },
+        {
           "name": "API_TOKEN_SALT",
-          "value": "API_TOKEN_SALT_PLACEHOLDER"
-       }
+          "value": "${API_TOKEN_SALT}"
+        },
+        {
+          "name": "STRAPI_ADMIN_SECRET",
+          "value": "${STRAPI_ADMIN_SECRET}"
+        }
       ],
-
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {

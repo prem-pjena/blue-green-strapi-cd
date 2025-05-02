@@ -43,8 +43,8 @@ jobs:
     env:
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
-      API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}  # Add API_TOKEN_SALT to env for access
-
+      API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}
+      STRAPI_ADMIN_SECRET: ${{ secrets.STRAPI_ADMIN_SECRET }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -68,16 +68,17 @@ jobs:
 
       - name: Terraform Validate
         run: |
-            cd terraform
-            terraform validate
-        
+          cd terraform
+          terraform validate
 
       - name: Terraform Plan
         run: |
-          cd terraform
-          terraform plan -out=tfplan \
-            -var="JWT_SECRET=${{ secrets.JWT_SECRET }}" \
-            -var="API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }}"  # Pass API_TOKEN_SALT here
+            cd terraform
+            terraform plan -out=tfplan \
+              -var="JWT_SECRET=${{ secrets.JWT_SECRET }}" \
+              -var="API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }}" \
+              -var="STRAPI_ADMIN_SECRET=${{ secrets.STRAPI_ADMIN_SECRET }}"  # Added STRAPI_ADMIN_SECRET
+        
 
       - name: Terraform Apply
         run: |
@@ -92,38 +93,52 @@ jobs:
 
       - name: Inject JWT_SECRET into Task Definition
         run: |
-            jq --arg JWT_SECRET "$JWT_SECRET" '
-              .containerDefinitions[0].environment = (
-                (if (.containerDefinitions[0].environment | type) == "array" 
-                 then .containerDefinitions[0].environment 
-                 else [] 
-                 end 
-                | map(if .name == "JWT_SECRET" then .value = $JWT_SECRET | . else . end))
-                + (if any(.containerDefinitions[0].environment[]; .name == "JWT_SECRET") 
-                   then [] 
-                   else [{"name":"JWT_SECRET","value":$JWT_SECRET}] 
-                   end)
-              )
-            ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
-        
-        
+          jq --arg JWT_SECRET "$JWT_SECRET" '
+            .containerDefinitions[0].environment = (
+              (if (.containerDefinitions[0].environment | type) == "array" 
+               then .containerDefinitions[0].environment 
+               else [] 
+               end 
+              | map(if .name == "JWT_SECRET" then .value = $JWT_SECRET | . else . end))
+              + (if any(.containerDefinitions[0].environment[]; .name == "JWT_SECRET") 
+                 then [] 
+                 else [{"name":"JWT_SECRET","value":$JWT_SECRET}] 
+                 end)
+            )
+          ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
+
       - name: Inject API_TOKEN_SALT into Task Definition
         run: |
-              jq --arg API_TOKEN_SALT "$API_TOKEN_SALT" '
-                .containerDefinitions[0].environment = (
-                  (if (.containerDefinitions[0].environment | type) == "array" 
-                   then .containerDefinitions[0].environment 
-                   else [] 
-                   end 
-                  | map(if .name == "API_TOKEN_SALT" then .value = $API_TOKEN_SALT | . else . end))
-                  + (if any(.containerDefinitions[0].environment[]; .name == "API_TOKEN_SALT") 
-                     then [] 
-                     else [{"name":"API_TOKEN_SALT","value":$API_TOKEN_SALT}] 
-                     end)
-                )
-              ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
-          
-        
+          jq --arg API_TOKEN_SALT "$API_TOKEN_SALT" '
+            .containerDefinitions[0].environment = (
+              (if (.containerDefinitions[0].environment | type) == "array" 
+               then .containerDefinitions[0].environment 
+               else [] 
+               end 
+              | map(if .name == "API_TOKEN_SALT" then .value = $API_TOKEN_SALT | . else . end))
+              + (if any(.containerDefinitions[0].environment[]; .name == "API_TOKEN_SALT") 
+                 then [] 
+                 else [{"name":"API_TOKEN_SALT","value":$API_TOKEN_SALT}] 
+                 end)
+            )
+          ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
+
+      - name: Inject STRAPI_ADMIN_SECRET into Task Definition
+        run: |
+          jq --arg STRAPI_ADMIN_SECRET "$STRAPI_ADMIN_SECRET" '
+            .containerDefinitions[0].environment = (
+              (if (.containerDefinitions[0].environment | type) == "array"
+               then .containerDefinitions[0].environment
+               else []
+               end
+              | map(if .name == "STRAPI_ADMIN_SECRET" then .value = $STRAPI_ADMIN_SECRET | . else . end))
+              + (if any(.containerDefinitions[0].environment[]; .name == "STRAPI_ADMIN_SECRET")
+                 then []
+                 else [{"name":"STRAPI_ADMIN_SECRET","value":$STRAPI_ADMIN_SECRET}]
+                 end)
+            )
+          ' taskdef.json > taskdef-temp.json && mv taskdef-temp.json taskdef.json
+
       - name: Register New Task Definition
         id: register_task
         run: |
@@ -155,13 +170,12 @@ jobs:
 
   terraform-destroy:
     name: Terraform Destroy on Failure
-    if: failure()  # Ensures this runs only if the previous jobs fail
+    if: failure()
     runs-on: ubuntu-latest
     needs: terraform-deployment
     env:
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}  # Include API_TOKEN_SALT in the destroy job
-
+      API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -188,4 +202,4 @@ jobs:
           cd terraform
           terraform destroy -auto-approve -input=false \
             -var="JWT_SECRET=${{ secrets.JWT_SECRET }}" \
-            -var="API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }}"  # Pass API_TOKEN_SALT here too
+            -var="API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }}"
