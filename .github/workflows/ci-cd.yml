@@ -77,6 +77,13 @@ jobs:
           jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image = $IMAGE' taskdef.json > taskdef-temp.json
           mv taskdef-temp.json taskdef.json
 
+      - name: Inject JWT_SECRET into Task Definition
+        run: |
+          jq --arg JWT_SECRET "${{ secrets.JWT_SECRET }}" \
+             '.containerDefinitions[0].environment += [{"name":"JWT_SECRET","value":$JWT_SECRET}]' \
+             taskdef.json > taskdef-temp.json
+          mv taskdef-temp.json taskdef.json
+
       - name: Register New Task Definition
         id: register_task
         run: |

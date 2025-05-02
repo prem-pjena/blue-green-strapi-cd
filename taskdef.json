@@ -9,13 +9,19 @@
   "containerDefinitions": [
     {
       "name": "strapi",
-      "image": "331405041655.dkr.ecr.us-east-1.amazonaws.com/strapi-repo:latest", 
+      "image": "331405041655.dkr.ecr.us-east-1.amazonaws.com/strapi-repo:latest",
       "essential": true,
       "portMappings": [
         {
           "containerPort": 1337,
           "hostPort": 1337,
           "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "JWT_SECRET",
+          "value": "${JWT_SECRET}"
         }
       ]
     }

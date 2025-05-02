@@ -7,5 +7,5 @@ Resources:
       LoadBalancerInfo:
         ContainerName: strapi
         ContainerPort: 1337
-      Role: arn:aws:iam::331405041655:role/ecsServiceRole # If needed, specify the service role
+      Role: arn:aws:iam::331405041655:role/ecsServiceRole # Specify the ECS Service Role
       DesiredCount: 1 # Ensure you specify the number of desired task instances
