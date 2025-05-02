@@ -24,16 +24,18 @@ jobs:
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
 
-      - name: Build Docker image
+      - name: Build and Tag Docker Image
         run: |
-          docker build -t strapi-app:$GITHUB_SHA .
-          docker tag strapi-app:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+          docker build -t strapi-repo:$GITHUB_SHA .
+          docker tag strapi-repo:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+          docker tag strapi-repo:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
-      - name: Push Docker image to ECR
+      - name: Push Docker Image to ECR
         run: |
           docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
-  # CD - Blue/Green Deployment - Strapi App with Terraform
+  # CD - Blue/Green Deployment with Terraform and CodeDeploy
   terraform-deployment:
     runs-on: ubuntu-latest
     needs: build-push
@@ -54,10 +56,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: List Files in Directory
-        run: |
-          ls -la terraform
-
       - name: Terraform Init
         run: |
           cd terraform
@@ -74,7 +72,6 @@ jobs:
           terraform apply -auto-approve tfplan
 
       - name: Update Task Definition with New Image URI
-        id: render_taskdef
         run: |
           IMAGE_URI="${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA"
           jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image = $IMAGE' taskdef.json > taskdef-temp.json
@@ -89,15 +86,17 @@ jobs:
 
       - name: Create Deployment via CodeDeploy
         run: |
-            ENCODED_APPSPEC=$(jq -Rs . < appspec.yaml)
-            aws deploy create-deployment \
-              --application-name strapi-codedeploy-app \
-              --deployment-group-name strapi-codedeploy-deployment-group \
-              --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
-              --cli-input-json "$(jq -n --arg content "$ENCODED_APPSPEC" '{
-                applicationName: "strapi-codedeploy-app",
-                deploymentGroupName: "strapi-codedeploy-deployment-group",
-                deploymentConfigName: "CodeDeployDefault.ECSCanary10Percent5Minutes",
+          ENCODED_APPSPEC=$(jq -Rs . < appspec.yaml)
+          aws deploy create-deployment \
+            --cli-input-json "$(jq -n \
+              --arg content "$ENCODED_APPSPEC" \
+              --arg app "strapi-codedeploy-app" \
+              --arg group "strapi-codedeploy-deployment-group" \
+              --arg config "CodeDeployDefault.ECSCanary10Percent5Minutes" \
+              '{
+                applicationName: $app,
+                deploymentGroupName: $group,
+                deploymentConfigName: $config,
                 revision: {
                   revisionType: "AppSpecContent",
                   appSpecContent: {
@@ -105,8 +104,6 @@ jobs:
                   }
                 }
               }')"
-        
-        
 
       - name: Terraform Destroy (on failure)
         if: failure()
